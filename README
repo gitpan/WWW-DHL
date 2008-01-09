@@ -1,0 +1,39 @@
+NAME
+    DHL - Perl module for the DHL online tracking service.
+
+SYNOPSIS
+      my $dhl = DHL->new(ID => 12345);
+      print Dumper $dhl->status();
+      ...
+
+DESCRIPTION
+    This module allows you to check the status of YOUR shipments via the DHL
+    website. For privacy issues please consider the website. Please note:
+    This module is still some kind of alpha, because there are many
+    different pages on the DHL website.
+
+METHODS
+    DHL->new()
+        Obligatory method to create the DHL object. You can pass the
+        following fields: ID, Zip, Reference and Abroad.
+
+    $dhl->status()
+        This method will try to fetch the status from the website. If there
+        is an error, it will return undef and set $@. Otherwise you will get
+        a hashref containing everything we could find at the status page.
+
+BUGS
+    Please contact the author, if you find bugs in this code.
+
+AUTHOR
+    Sebastian Stumpf <sepp@cpan.org>
+
+COPYRIGHT
+    Copyright 2007 Sebastian Stumpf. All rights reserved.
+
+    This library is free software; you can redistribute it and/or modify it
+    under the same terms as Perl itself.
+
+SEE ALSO
+    LWP::UserAgent(3), HTML::TokeParser(3), http://www.dhl.de/
+

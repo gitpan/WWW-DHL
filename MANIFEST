@@ -1,0 +1,7 @@
+MANIFEST
+t/base.t
+Makefile.PL
+README
+lib/WWW/DHL.pm
+Changes
+META.yml                                 Module meta-data (added by MakeMaker)
