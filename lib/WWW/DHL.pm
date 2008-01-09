@@ -9,7 +9,7 @@ use base qw(LWP::UserAgent);
 use HTML::TokeParser;
 use HTML::Entities;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 sub new
 {
@@ -100,12 +100,6 @@ sub status
 
 	return $stat;
 }
-
-### TODO:
-# nach td class="ListEvenLine" suchen
-# key ist im <strong>.
-# HTML::Entities...
-# 942071476325
 
 return 1;
 __END__
