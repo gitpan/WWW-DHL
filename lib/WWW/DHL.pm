@@ -9,7 +9,7 @@ use base qw(LWP::UserAgent);
 use HTML::TokeParser;
 use HTML::Entities;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 sub new
 {
@@ -28,77 +28,71 @@ sub new
 		die("Please specify a valid ID")		if length($self->{'ID'}) < 12;
 	}
 
+	$self->{'Base'} .= "&idc=" . $self->{'ID'};
+
 	return $self;
-}
-
-sub _post
-{
-	my $self = shift;
-	my $url = shift;
-	my $form = shift;
-
-	my $post = $self->post($url, $form);
-
-	unless($post->is_success())
-	{
-		eval { die $post->status_line() };
-		return undef;
-	}
-
-	return $post->content();
 }
 
 sub _parser
 {
-	my $self = shift;
 	my $doc = shift;
 	my $parser = HTML::TokeParser->new(\$doc);
 
-	my %ret;
-	my @temp;
+	my $temp;
+	my @stack;
+
+	my $sum = {};
+	my $hist = [];
+
 	while(my $t = $parser->get_token())
 	{
-		next unless $t->[0] eq 'S' && ($t->[1] eq 'td' || $t->[1] eq 'strong');
-		my $var = $parser->get_text();
-
-		chomp $var;
-		$var =~ s#^\s+##;
-		$var =~ s#\s+\z##;
-
-		next unless $var;
-		next if $var eq "[IMG]";
-		next if $var =~ m#^\s+\z#;
-
-		$var =~ s/:\z//;
-		decode_entities($var);
-
-		push @temp, $var;
+		if($t->[0] eq 'S' && $t->[1] eq 'td' && $t->[2] && $t->[2]->{'class'} && $t->[2]->{'class'} eq 'label')
+		{
+			next if ~~ keys %$sum > 4;
+			my $key = $parser->get_trimmed_text();
+			$temp = $key unless $key eq 'Sendungsnummer';
+		}
+		elsif($t->[0] eq 'S' && $t->[1] eq 'td' && $t->[2] && $t->[2]->{'class'} && $t->[2]->{'class'} eq 'value')
+		{
+			if(~~ keys %$sum >= 4)
+			{
+				push @stack, $parser->get_trimmed_text();
+			}
+			else
+			{
+				my $value = $parser->get_trimmed_text();
+				$sum->{$temp} = $value if $temp && $value;
+			}
+		}
 	}
 
-	splice(@temp, 0, 2);
-	push @temp, undef unless $#temp % 2;
 
-	die("Could not fetch the status...") if grep { $_ && m#\[IMG\]# } @temp;
+	$temp = [];
+	while(@stack)
+	{
+		push @$temp, shift @stack;
+		if(~~ @$temp == 3)
+		{
+			push @$hist, $temp;
+			$temp = [];
+		}
+	}
 
-	%ret = @temp;
-	return \%ret;
+	return({Summary => $sum, History => $hist});
 }
 
 sub status
 {
 	my $self = shift;
-	my $ref = {};
+	my $get = $self->get($self->{'Base'});
 
-	my %hash = (ID=>'idc', Zip=>'zip', Abroad=>'internationalShipment', Reference=>'rfn');
-	while(my ($k, $v) = each (%hash))
+	unless($get->is_success())
 	{
-		$ref->{$v} = $self->{$k} if $self->{$k};
+		eval { die("GET request failed: ". $get->status_line()) };
+		return undef;
 	}
 
-	my $doc = $self->_post($self->{'Base'}, $ref) || die($@);
-	my $stat = $self->_parser($doc);
-
-	return $stat;
+	my $stat = _parser($get->content());
 }
 
 return 1;
@@ -120,7 +114,8 @@ This module allows you to check the status of B<YOUR> shipments
 via the DHL website. For privacy issues please consider the 
 website.
 B<Please note:> This module is still some kind of alpha, because
-there are many different pages on the DHL website.
+there are many different pages on the DHL website and they are 
+changing constantly.
 
 =head1 METHODS
 
@@ -128,20 +123,20 @@ there are many different pages on the DHL website.
 
 =item DHL->new()
 
-Obligatory method to create the DHL object. You can pass the following
-fields: ID, Zip, Reference and Abroad.
+Obligatory method to create the DHL object. You B<must> pass a valid
+ID for your shipment.
 
 =item $dhl->status()
 
 This method will try to fetch the status from the website. If there is
 an error, it will return undef and set $@. Otherwise you will get a 
-hashref containing everything we could find at the status page.
+hashref containing the summary and history of your shipment.
 
 =back
 
 =head1 BUGS
 
-Please contact the author, if you find bugs in this code.
+Please contact the author, if you find any in this code.
 
 =head1 AUTHOR
 

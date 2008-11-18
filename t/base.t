@@ -7,5 +7,5 @@ use lib qw(lib);
 use Test::Simple tests => 1;
 use WWW::DHL;
 
-my $db = WWW::DHL->new(ID=>123456789123, Zip=>123);
+my $db = WWW::DHL->new(ID=>123456789123);
 ok(defined($db));
